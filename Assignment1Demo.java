@@ -1,22 +1,11 @@
-/*
-Single-file Java program you can copy-paste into IntelliJ IDEA (or any Java IDE).
-It implements:
- - MergeSort (with reusable buffer + small-n cutoff)
- - QuickSort (randomized pivot, recurse on smaller partition)
- - Deterministic Select (median-of-medians / MoM5)
- - Closest Pair (2D divide-and-conquer)
- - Simple Metrics (comparisons, allocations, recursion depth)
- - Small correctness checks and timing in main()
 
-Save as Assignment1Demo.java and run (Java 17+ recommended).
-*/
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Assignment1Demo {
 
-    /* --------------------- Metrics --------------------- */
+
     public static class Metrics {
         public final AtomicLong comparisons = new AtomicLong();
         public final AtomicLong allocations = new AtomicLong();
@@ -50,7 +39,7 @@ public class Assignment1Demo {
         }
     }
 
-    /* --------------------- Utilities --------------------- */
+
     public static final class Utils {
         private static final Random RNG = new Random();
 
@@ -67,7 +56,7 @@ public class Assignment1Demo {
             }
         }
 
-        // Lomuto partition: pivotIndex is index of pivot; returns final pivot index
+     
         public static int partition(int[] a, int lo, int hi, int pivotIndex) {
             int pivot = a[pivotIndex];
             swap(a, pivotIndex, hi);
@@ -83,7 +72,7 @@ public class Assignment1Demo {
         }
     }
 
-    /* --------------------- MergeSort --------------------- */
+
     public static final class MergeSort {
         private MergeSort() {}
 
@@ -96,7 +85,7 @@ public class Assignment1Demo {
         private static void sort(int[] a, int[] buf, int lo, int hi, Metrics m) {
             if (lo >= hi) return;
             int n = hi - lo + 1;
-            if (n <= 16) { // cutoff to insertion
+            if (n <= 16) { 
                 insertion(a, lo, hi, m);
                 return;
             }
@@ -136,7 +125,7 @@ public class Assignment1Demo {
         }
     }
 
-    /* --------------------- QuickSort --------------------- */
+
     public static final class QuickSort {
         private static final Random RNG = new Random();
 
@@ -148,7 +137,7 @@ public class Assignment1Demo {
             sort(a, 0, a.length - 1, m);
         }
 
-        // tail recursion elimination: loop and recurse on smaller side
+
         private static void sort(int[] a, int lo, int hi, Metrics m) {
             while (lo < hi) {
                 int pivot = lo + RNG.nextInt(hi - lo + 1);
@@ -159,8 +148,8 @@ public class Assignment1Demo {
                 m.enter();
                 try {
                     if (leftSize < rightSize) {
-                        sort(a, lo, p - 1, m); // recurse smaller
-                        lo = p + 1; // iterate on larger
+                        sort(a, lo, p - 1, m); 
+                        lo = p + 1;
                     } else {
                         sort(a, p + 1, hi, m);
                         hi = p - 1;
@@ -170,17 +159,17 @@ public class Assignment1Demo {
         }
     }
 
-    /* --------------------- Deterministic Select (Median-of-Medians) --------------------- */
+
     public static final class DeterministicSelect {
         private DeterministicSelect() {}
 
-        // Public convenience: select k-th smallest (0-based)
+
         public static int select(int[] a, int k, Metrics m) {
             if (a == null || k < 0 || k >= a.length) throw new IllegalArgumentException();
             return select(a, 0, a.length - 1, k, m);
         }
 
-        // returns value of k-th smallest in a[lo..hi]
+
         private static int select(int[] a, int lo, int hi, int k, Metrics m) {
             while (true) {
                 if (lo == hi) return a[lo];
@@ -195,7 +184,7 @@ public class Assignment1Demo {
             }
         }
 
-        // choose pivot index using median-of-medians (groups of 5)
+
         private static int pivotMedianOfMedians(int[] a, int lo, int hi, Metrics m) {
             int n = hi - lo + 1;
             if (n <= 5) {
@@ -203,7 +192,7 @@ public class Assignment1Demo {
                 return lo + n / 2;
             }
             int numGroups = (n + 4) / 5;
-            // move each group's median to the front region [lo .. lo+numGroups-1]
+
             for (int i = 0; i < numGroups; ++i) {
                 int gLo = lo + i * 5;
                 int gHi = Math.min(gLo + 4, hi);
@@ -212,35 +201,33 @@ public class Assignment1Demo {
                 Utils.swap(a, lo + i, medianIndex);
                 m.addAllocation(1);
             }
-            // find median of the medians by selecting on the front region
+
             int medianOfMediansValue = selectValue(a, lo, lo + numGroups - 1, lo + numGroups / 2, m);
-            // find an index of this value between lo..hi (safe because value is from that range)
+
             for (int i = lo; i <= hi; ++i) if (a[i] == medianOfMediansValue) return i;
-            // fallback (shouldn't happen): return lo
+
             return lo;
         }
 
-        // helper that returns value (k-th smallest) within given bounds; uses select loop
+
         private static int selectValue(int[] a, int lo, int hi, int kIndex, Metrics m) {
-            // kIndex is absolute index in array we want (the earlier code uses lo + something),
-            // but we want a rank relative to lo..hi -> translate:
+
             int relativeK = kIndex - lo;
-            if (relativeK < 0 || relativeK > (hi - lo)) relativeK = (hi - lo) / 2; // safe fallback
-            // Copy the subarray (small) to a temp array to avoid disturbing outer array structure during recursion
-            // (This keeps things simpler and safe.)
+            if (relativeK < 0 || relativeK > (hi - lo)) relativeK = (hi - lo) / 2;
+
             int len = hi - lo + 1;
             int[] tmp = new int[len];
             System.arraycopy(a, lo, tmp, 0, len);
-            // Now perform deterministic select on tmp for relativeK
-            Metrics tempM = new Metrics(); // local metrics to avoid polluting outer counters
+
+            Metrics tempM = new Metrics(); 
             int val = selectInTemp(tmp, 0, len - 1, relativeK, tempM);
-            // we can choose to add some of tempM counts to outer m to reflect work
+
             m.addComparison(tempM.comparisons.get());
             m.addAllocation(tempM.allocations.get());
             return val;
         }
 
-        // internal select used for the small temp array; it's a straightforward recursive implementation
+
         private static int selectInTemp(int[] a, int lo, int hi, int k, Metrics m) {
             while (true) {
                 if (lo == hi) return a[lo];
@@ -255,14 +242,14 @@ public class Assignment1Demo {
                     int gHi = Math.min(gLo + 4, hi);
                     insertionSortRange(a, gLo, gHi, m);
                     int medianIndex = gLo + (gHi - gLo) / 2;
-                    // move median to front
+
                     int dest = lo + i;
                     int t = a[medianIndex]; a[medianIndex] = a[dest]; a[dest] = t;
                     m.addAllocation(1);
                 }
                 int mid = lo + (numGroups - 1) / 2;
-                int pivotVal = selectInTemp(a, lo, lo + numGroups - 1, mid - lo, m); // median of medians value
-                // find pivot index
+                int pivotVal = selectInTemp(a, lo, lo + numGroups - 1, mid - lo, m); 
+
                 int pivotIndex = lo;
                 for (int i = lo; i <= hi; ++i) if (a[i] == pivotVal) { pivotIndex = i; break; }
                 int p = partitionInTemp(a, lo, hi, pivotIndex);
@@ -301,7 +288,7 @@ public class Assignment1Demo {
         }
     }
 
-    /* --------------------- Closest Pair (2D) --------------------- */
+
     public static final class ClosestPair {
         private ClosestPair() {}
 
@@ -357,17 +344,17 @@ public class Assignment1Demo {
         }
     }
 
-    /* --------------------- Main / Demo --------------------- */
+
     public static void main(String[] args) {
         Metrics m = new Metrics();
 
-        // Small correctness test for sorting algorithms
-        int n = 20000; // modest size so this runs quickly
+
+        int n = 20000; 
         Random rnd = new Random(12345);
         int[] base = new int[n];
         for (int i = 0; i < n; ++i) base[i] = rnd.nextInt();
 
-        // MergeSort
+
         int[] a1 = base.clone();
         m.reset();
         long t0 = System.nanoTime();
@@ -377,7 +364,7 @@ public class Assignment1Demo {
         System.out.printf("MergeSort: n=%d time_ms=%.3f %s\n", n, (t1 - t0) / 1e6, okMerge ? "OK" : "FAIL");
         System.out.println("  " + m);
 
-        // QuickSort
+ 
         int[] a2 = base.clone();
         m.reset();
         t0 = System.nanoTime();
@@ -387,7 +374,6 @@ public class Assignment1Demo {
         System.out.printf("QuickSort: n=%d time_ms=%.3f %s\n", n, (t1 - t0) / 1e6, okQuick ? "OK" : "FAIL");
         System.out.println("  " + m);
 
-        // Deterministic Select (median)
         int[] a3 = base.clone();
         int k = n / 2;
         m.reset();
@@ -399,7 +385,7 @@ public class Assignment1Demo {
         System.out.printf("DeterministicSelect: k=%d time_ms=%.3f %s (value=%d)\n", k, (t1 - t0) / 1e6, okSelect ? "OK" : "FAIL", med);
         System.out.println("  " + m);
 
-        // Closest pair (random points)
+
         int pN = 20000;
         double[][] pts = new double[pN][2];
         Random rr = new Random(42);
@@ -411,7 +397,7 @@ public class Assignment1Demo {
         System.out.printf("ClosestPair: n=%d time_ms=%.3f distance=%.6g\n", pN, (t1 - t0) / 1e6, d);
         System.out.println("  " + m);
 
-        // Extra small validation: ClosestPair vs brute for small n
+
         int small = 300;
         double[][] smallPts = new double[small][2];
         Random r2 = new Random(7);
